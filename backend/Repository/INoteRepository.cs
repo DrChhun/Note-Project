@@ -5,7 +5,7 @@ namespace backend.Repository;
 
 public interface INoteRepository
 {
-    Task<PagedResult<Note>> GetPagedAsync(string? title = null, int? type = null, int page = 1, int pageSize = 15);
+    Task<PagedResult<Note>> GetPagedAsync(string? title = null, int? type = null, int page = 1, int pageSize = 15, string? sortBy = null, string? sortOrder = null);
     Task<Note?> GetByIdAsync(int id);
     Task<Note> CreateAsync(CreateNoteRequest request);
     Task<Note?> UpdateAsync(int id, UpdateNoteRequest request);

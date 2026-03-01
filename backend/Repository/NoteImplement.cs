@@ -15,10 +15,15 @@ public sealed class NoteImplement : INoteRepository
             ?? throw new InvalidOperationException("ConnectionStrings:SqlServer is missing.");
     }
 
-    public async Task<PagedResult<Note>> GetPagedAsync(string? title = null, int? type = null, int page = 1, int pageSize = 15)
+    public async Task<PagedResult<Note>> GetPagedAsync(string? title = null, int? type = null, int page = 1, int pageSize = 15, string? sortBy = null, string? sortOrder = null)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 15;
+
+        var orderColumn = string.Equals(sortBy, "title", StringComparison.OrdinalIgnoreCase) ? "title"
+            : string.Equals(sortBy, "createdAt", StringComparison.OrdinalIgnoreCase) ? "created_at"
+            : "created_at";
+        var orderDir = string.Equals(sortOrder, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
 
         await using var conn = new SqlConnection(_connectionString);
         var titlePattern = string.IsNullOrWhiteSpace(title) ? null : $"%{title.Trim()}%";
@@ -33,7 +38,7 @@ public sealed class NoteImplement : INoteRepository
             """;
         var totalCount = await conn.ExecuteScalarAsync<int>(countSql, param);
 
-        var dataSql = """
+        var dataSql = $"""
             SELECT
                 id AS Id,
                 title AS Title,
@@ -44,7 +49,7 @@ public sealed class NoteImplement : INoteRepository
             FROM dbo.Notes
             WHERE (@TitlePattern IS NULL OR title LIKE @TitlePattern)
               AND (@Type IS NULL OR type = @Type)
-            ORDER BY id DESC
+            ORDER BY {orderColumn} {orderDir}
             OFFSET @Offset ROWS
             FETCH NEXT @PageSize ROWS ONLY;
             """;

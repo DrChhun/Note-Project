@@ -15,6 +15,12 @@ GET {{baseUrl}}/?type=0
 ### Get all notes – filter by title and type
 GET {{baseUrl}}/?title=note&type=1
 
+### Get all notes – sort by title (asc)
+GET {{baseUrl}}/?sortBy=title&sortOrder=asc
+
+### Get all notes – sort by createdAt (desc, default)
+GET {{baseUrl}}/?sortBy=createdAt&sortOrder=desc
+
 ### Get note by id
 GET {{baseUrl}}/23423423423
 
