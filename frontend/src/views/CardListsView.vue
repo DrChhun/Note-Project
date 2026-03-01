@@ -44,7 +44,6 @@ async function fetchNotes(reset = true) {
   if (reset) {
     isLoading.value = true
     currentPage.value = 1
-    notes.value = []
     hasMore.value = true
   } else {
     isLoadingMore.value = true
@@ -122,7 +121,7 @@ const filterLabels: Record<Filter, string> = {
 }
 
 const activeFilterUnderline =
-  "after:block after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-primary"
+  "after:block after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary"
 
 function openNote(id: string | number) {
   router.push(`/notes/${id}`)
@@ -146,7 +145,7 @@ function formatDate(iso?: string): string {
 
 <template>
   <div class="flex flex-col gap-6">
-    <h1 class="text-4xl font-extrabold mt-8">
+    <h1 class="text-4xl py-6 font-extrabold mt-8">
       Note Taking App
     </h1>
 
@@ -173,13 +172,13 @@ function formatDate(iso?: string): string {
 
     <div class="flex items-center justify-between gap-4 pb-6">
       <nav
-        class="flex gap-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        class="flex gap-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-h-[28px] items-end"
       >
         <button
           v-for="filter in (['all', 'work', 'learn', 'personal'] as const)"
           :key="filter"
           type="button"
-          class="text-sm font-semibold pb-0.5 whitespace-nowrap cursor-pointer bg-transparent border-none relative hover:text-foreground transition-colors"
+          class="text-sm font-semibold py-1 pb-1.5 whitespace-nowrap cursor-pointer bg-transparent border-none relative hover:text-foreground transition-colors min-w-0"
           :class="[
             activeFilter === filter ? 'text-foreground' : 'text-muted-foreground',
             activeFilter === filter && activeFilterUnderline
@@ -197,32 +196,43 @@ function formatDate(iso?: string): string {
       </Button>
     </div>
 
-    <div v-if="error" class="text-destructive text-sm">
+    <div v-if="error" class="text-destructive text-sm min-h-[240px]">
       {{ error }}
     </div>
 
-    <div v-else-if="isLoading" class="text-muted-foreground text-sm">
+    <div v-else-if="isLoading && notes.length === 0" class="text-muted-foreground text-sm min-h-[240px] flex items-start">
       Loading notes...
     </div>
 
-    <div v-else-if="notes.length === 0" class="text-muted-foreground text-center py-12">
+    <div v-else-if="notes.length === 0" class="text-muted-foreground text-center py-12 min-h-[240px] flex items-center justify-center">
       There are no data
     </div>
 
     <template v-else>
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="relative">
         <div
-          v-for="note in notes"
-          :key="note.id"
-          class="cursor-pointer"
-          @click="openNote(note.id)"
+          class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 transition-opacity duration-150"
+          :class="{ 'opacity-60 pointer-events-none': isLoading }"
         >
-          <NoteCard
-            :title="note.title"
-            :description="note.content"
-            :date="formatDate(note.createdAt)"
-            :type="note.type"
-          />
+          <div
+            v-for="note in notes"
+            :key="note.id"
+            class="cursor-pointer"
+            @click="openNote(note.id)"
+          >
+            <NoteCard
+              :title="note.title"
+              :description="note.content"
+              :date="formatDate(note.createdAt)"
+              :type="note.type"
+            />
+          </div>
+        </div>
+        <div
+          v-if="isLoading"
+          class="absolute inset-0 flex items-center justify-center pointer-events-none"
+        >
+          <span class="text-sm text-muted-foreground">Loading...</span>
         </div>
       </div>
 
