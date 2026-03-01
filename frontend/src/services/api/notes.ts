@@ -36,11 +36,16 @@ export const getNotes = async (params?: {
 
 const DEFAULT_PAGE_SIZE = 15
 
+export type SortBy = 'title' | 'createdAt'
+export type SortOrder = 'asc' | 'desc'
+
 export const getNotesPaginated = async (params: {
   page?: number
   pageSize?: number
   title?: string
   type?: number
+  sortBy?: SortBy
+  sortOrder?: SortOrder
 }): Promise<PaginatedResponse<NoteApi>> => {
   const { page = 1, pageSize = DEFAULT_PAGE_SIZE, ...rest } = params
   const response = await http.get<PaginatedResponse<NoteApi>>('/notes/', {

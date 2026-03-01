@@ -10,7 +10,6 @@ const title = ref('')
 const content = ref('')
 const type = ref(0)
 const isCreating = ref(false)
-const error = ref<string | null>(null)
 
 const TYPE_LABELS: Record<number, string> = {
   0: 'Personal',
@@ -38,22 +37,25 @@ const todayShort = computed(() =>
 )
 
 async function create() {
+  if (!title.value.trim()) {
+    toast.error('Title is required')
+    return
+  }
   isCreating.value = true
-  error.value = null
   try {
     const note = await createNote({
-      title: title.value || 'Untitled',
-      content: content.value,
+      title: title.value.trim(),
+      content: content.value.trim(),
       type: type.value,
     })
     if (note?.id != null) {
       toast.success('Note created successfully')
       router.push('/')
     } else {
-      error.value = 'Create request did not return a valid note'
+      toast.error('Create request did not return a valid note')
     }
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to create note'
+    toast.error(e instanceof Error ? e.message : 'Failed to create note')
   } finally {
     isCreating.value = false
   }
@@ -66,25 +68,21 @@ function goBack() {
 
 <template>
   <div class="flex flex-col min-h-[calc(100vh-8rem)]">
-    <div class="sticky top-0 z-10 flex justify-between items-center py-6 pb-4 bg-background overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div class="sticky top-0 z-10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 sm:py-6 pb-4 bg-background overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <button
         type="button"
-        class="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        class="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors self-start shrink-0"
         @click="goBack"
       >
         ← Notes
       </button>
       <Button
-        class="py-6 w-[116px] cursor-pointer bg-[#DEEBF7] hover:bg-[#C5D9F0] text-gray-900 border-0"
+        class="w-full sm:w-[116px] py-4 sm:py-6 cursor-pointer bg-[#DEEBF7] hover:bg-[#C5D9F0] text-gray-900 border-0"
         :disabled="isCreating"
         @click="create"
       >
         {{ isCreating ? 'Creating...' : 'Save' }}
       </Button>
-    </div>
-
-    <div v-if="error" class="text-destructive text-sm mb-4">
-      {{ error }}
     </div>
 
     <div class="flex flex-col flex-1">
@@ -119,7 +117,7 @@ function goBack() {
           :maxlength="CONTENT_MAX"
           class="flex-1 min-h-[300px] text-[15px] leading-[1.7] border-none bg-transparent w-full text-foreground resize-none outline-none placeholder:text-muted-foreground"
         />
-        <span class="absolute bottom-2 right-0 text-xs text-muted-foreground">
+        <span style="bottom: -32px !important;" class="absolute right-0 text-xs text-muted-foreground">
           {{ contentCount }}/{{ CONTENT_MAX }}
         </span>
       </div>

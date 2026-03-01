@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { refDebounced } from '@vueuse/core'
+import { ChevronDown } from 'lucide-vue-next'
 import NoteCard from '@/components/NoteCard.vue'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { getNotesPaginated } from '@/services/api/notes'
 import type { NoteApi } from '@/types/note'
 
@@ -22,6 +29,23 @@ const PAGE_SIZE = 15
 const searchQuery = ref('')
 const debouncedSearchQuery = refDebounced(searchQuery, 400)
 const activeFilter = ref<Filter>('all')
+
+type SortOption = 'createdAt-desc' | 'createdAt-asc' | 'title-asc' | 'title-desc'
+const sortOption = ref<SortOption>('createdAt-desc')
+
+const sortBy = computed(() => sortOption.value.split('-')[0] as 'title' | 'createdAt')
+const sortOrder = computed(() => sortOption.value.split('-')[1] as 'asc' | 'desc')
+
+const SORT_LABELS: Record<SortOption, string> = {
+  'createdAt-desc': 'Newest first',
+  'createdAt-asc': 'Oldest first',
+  'title-asc': 'Title A–Z',
+  'title-desc': 'Title Z–A',
+}
+
+function setSortOption(option: SortOption) {
+  sortOption.value = option
+}
 const notes = ref<NoteApi[]>([])
 const currentPage = ref(1)
 const totalPages = ref(0)
@@ -34,9 +58,11 @@ const loadMoreSentinel = ref<HTMLElement | null>(null)
 let scrollObserver: IntersectionObserver | null = null
 
 function buildParams() {
-  const params: { title?: string; type?: number } = {}
+  const params: { title?: string; type?: number; sortBy?: string; sortOrder?: string } = {}
   if (debouncedSearchQuery.value.trim()) params.title = debouncedSearchQuery.value.trim()
   if (activeFilter.value !== 'all') params.type = FILTER_TO_TYPE[activeFilter.value]
+  params.sortBy = sortBy.value
+  params.sortOrder = sortOrder.value
   return params
 }
 
@@ -107,7 +133,7 @@ onUnmounted(() => {
   scrollObserver?.disconnect()
 })
 
-watch([debouncedSearchQuery, activeFilter], () => fetchNotes(true))
+watch([debouncedSearchQuery, activeFilter, sortOption], () => fetchNotes(true))
 
 function setFilter(filter: Filter) {
   activeFilter.value = filter
@@ -144,12 +170,12 @@ function formatDate(iso?: string): string {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
-    <h1 class="text-4xl py-6 font-extrabold mt-8">
+  <div class="flex flex-col gap-4 sm:gap-6">
+    <h1 class="text-2xl sm:text-3xl lg:text-4xl py-4 sm:py-6 font-extrabold mt-4 sm:mt-8">
       Note Taking App
     </h1>
 
-    <div class="pb-6">
+    <div class="pb-4 sm:pb-6">
       <div
         class="w-full flex items-center gap-2.5 bg-background border border-border rounded-[14px] px-3.5 py-3 text-muted-foreground cursor-text"
       >
@@ -166,30 +192,54 @@ function formatDate(iso?: string): string {
           aria-label="Search notes"
           class="flex-1 min-w-0 border-none bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground"
         >
-        <span class="text-xs font-bold text-muted-foreground border border-border rounded-lg px-1.5 py-0.5 shrink-0">/</span>
       </div>
     </div>
 
-    <div class="flex items-center justify-between gap-4 pb-6">
-      <nav
-        class="flex gap-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-h-[28px] items-end"
-      >
-        <button
-          v-for="filter in (['all', 'work', 'learn', 'personal'] as const)"
-          :key="filter"
-          type="button"
-          class="text-sm font-semibold py-1 pb-1.5 whitespace-nowrap cursor-pointer bg-transparent border-none relative hover:text-foreground transition-colors min-w-0"
-          :class="[
-            activeFilter === filter ? 'text-foreground' : 'text-muted-foreground',
-            activeFilter === filter && activeFilterUnderline
-          ]"
-          @click="setFilter(filter)"
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 sm:pb-6">
+      <div class="flex flex-wrap items-end gap-3 sm:gap-4 min-w-0">
+        <nav
+          class="flex gap-4 sm:gap-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-h-[28px] items-end -mx-1 px-1"
         >
-          {{ filterLabels[filter] }}
-        </button>
-      </nav>
+          <button
+            v-for="filter in (['all', 'work', 'learn', 'personal'] as const)"
+            :key="filter"
+            type="button"
+            class="text-sm font-semibold py-1 pb-1.5 whitespace-nowrap cursor-pointer bg-transparent border-none relative hover:text-foreground transition-colors min-w-0"
+            :class="[
+              activeFilter === filter ? 'text-foreground' : 'text-muted-foreground',
+              activeFilter === filter && activeFilterUnderline
+            ]"
+            @click="setFilter(filter)"
+          >
+            {{ filterLabels[filter] }}
+          </button>
+        </nav>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            as-child
+          >
+            <Button
+              variant="outline"
+              class="text-sm font-medium h-9 gap-1.5 px-3 min-w-0 max-w-[180px] border-border"
+              aria-label="Sort by"
+            >
+              {{ SORT_LABELS[sortOption] }}
+              <ChevronDown class="size-4 shrink-0 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" class="min-w-[160px]">
+            <DropdownMenuItem
+              v-for="opt in (['createdAt-desc', 'createdAt-asc', 'title-asc', 'title-desc'] as const)"
+              :key="opt"
+              @select="setSortOption(opt)"
+            >
+              {{ SORT_LABELS[opt] }}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <Button
-        class="shrink-0 py-6 w-[116px] cursor-pointer bg-[#DEEBF7] hover:bg-[#C5D9F0] text-gray-900 border-0"
+        class="shrink-0 py-4 sm:py-6 w-full sm:w-[116px] cursor-pointer bg-[#DEEBF7] hover:bg-[#C5D9F0] text-gray-900 border-0"
         @click="goToCreate"
       >
         Create note
@@ -211,7 +261,7 @@ function formatDate(iso?: string): string {
     <template v-else>
       <div class="relative">
         <div
-          class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 transition-opacity duration-150"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 transition-opacity duration-150"
           :class="{ 'opacity-60 pointer-events-none': isLoading }"
         >
           <div

@@ -23,10 +23,10 @@ const backgroundColor = computed(() =>
 
 <template>
   <div
-    class="h-[220px] rounded-2xl p-5 text-left shadow-sm flex flex-col hover:cursor-pointer overflow-hidden"
+    class="min-h-[180px] sm:min-h-[200px] lg:h-[220px] rounded-xl sm:rounded-2xl p-4 sm:p-5 text-left shadow-sm flex flex-col hover:cursor-pointer overflow-hidden"
     :style="{ backgroundColor }"
   >
-    <h2 class="text-xl font-semibold text-gray-900 leading-snug shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">
+    <h2 class="text-lg sm:text-xl font-semibold text-gray-900 leading-snug shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">
       {{ title }}
     </h2>
     <div class="flex-1 min-h-0 mt-1 flex flex-col">

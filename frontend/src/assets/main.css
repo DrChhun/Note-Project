@@ -130,11 +130,18 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 0 1rem 1.5rem;
+  padding: 0 0.75rem 1rem;
+}
+
+@media (min-width: 640px) {
+  .app-container {
+    padding: 0 1rem 1.5rem;
+  }
 }
 
 @media (min-width: 980px) {
   .app-container {
     max-width: 980px;
+    padding: 0 1rem 1.5rem;
   }
 }

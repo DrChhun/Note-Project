@@ -17,7 +17,6 @@ const type = ref<number | null>(null)
 const isLoading = ref(false)
 const isSaving = ref(false)
 const isDeleting = ref(false)
-const error = ref<string | null>(null)
 
 const TYPE_LABELS: Record<number, string> = {
   0: 'Personal',
@@ -64,7 +63,6 @@ const displayDate = computed(() => {
 
 onMounted(async () => {
   isLoading.value = true
-  error.value = null
   try {
     note.value = await getNoteById(noteId.value)
     title.value = note.value.title
@@ -72,24 +70,28 @@ onMounted(async () => {
     const t = note.value.type
     type.value = t === 0 || t === 1 || t === 2 ? t : null
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load note'
+    toast.error(e instanceof Error ? e.message : 'Failed to load note')
   } finally {
     isLoading.value = false
   }
 })
 
 async function save() {
+  if (!title.value.trim()) {
+    toast.error('Title is required')
+    return
+  }
   isSaving.value = true
-  error.value = null
   try {
     await updateNote(noteId.value, {
-      title: title.value,
-      content: content.value,
+      title: title.value.trim(),
+      content: content.value.trim(),
       type: type.value ?? 0,
     })
+    toast.success('Note saved successfully')
     router.push('/')
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to save note'
+    toast.error(e instanceof Error ? e.message : 'Failed to save note')
   } finally {
     isSaving.value = false
   }
@@ -97,17 +99,16 @@ async function save() {
 
 async function handleDelete() {
   isDeleting.value = true
-  error.value = null
   try {
     const { success } = await deleteNote(noteId.value)
     if (success) {
       toast.success('Note deleted successfully')
       router.push('/')
     } else {
-      error.value = 'Delete request did not succeed'
+      toast.error('Delete request did not succeed')
     }
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to delete note'
+    toast.error(e instanceof Error ? e.message : 'Failed to delete note')
   } finally {
     isDeleting.value = false
   }
@@ -120,24 +121,24 @@ function goBack() {
 
 <template>
   <div class="flex flex-col min-h-[calc(100vh-8rem)]">
-    <div class="sticky top-0 z-10 flex justify-between items-center py-6 pb-4 bg-background overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div class="sticky top-0 z-10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 sm:py-6 pb-4 bg-background overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <button
         type="button"
-        class="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        class="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors self-start shrink-0"
         @click="goBack"
       >
         ← Notes
       </button>
-      <div class="flex gap-2">
+      <div class="flex gap-2 flex-1 sm:flex-initial w-full sm:w-auto min-w-0">
         <Button
-          class="py-6 w-[116px] cursor-pointer bg-[#F8D7DA] hover:bg-[#F5C6CB] text-gray-800 border-0"
+          class="flex-1 min-w-0 sm:flex-none sm:w-[116px] py-4 sm:py-6 cursor-pointer bg-[#F8D7DA] hover:bg-[#F5C6CB] text-gray-800 border-0"
           :disabled="isDeleting || isSaving"
           @click="handleDelete"
         >
           {{ isDeleting ? 'Deleting...' : 'Delete' }}
         </Button>
         <Button
-          class="py-6 w-[116px] cursor-pointer bg-[#DEEBF7] hover:bg-[#C5D9F0] text-gray-900 border-0"
+          class="flex-1 min-w-0 sm:flex-none sm:w-[116px] py-4 sm:py-6 cursor-pointer bg-[#DEEBF7] hover:bg-[#C5D9F0] text-gray-900 border-0"
           :disabled="isSaving || isDeleting"
           @click="save"
         >
@@ -146,11 +147,7 @@ function goBack() {
       </div>
     </div>
 
-    <div v-if="error" class="text-destructive text-sm mb-4">
-      {{ error }}
-    </div>
-
-    <div v-else-if="isLoading" class="text-muted-foreground text-sm">
+    <div v-if="isLoading" class="text-muted-foreground text-sm">
       Loading note...
     </div>
 
@@ -186,7 +183,7 @@ function goBack() {
           :maxlength="CONTENT_MAX"
           class="flex-1 min-h-[300px] text-[15px] leading-[1.7] border-none bg-transparent w-full text-foreground resize-none outline-none placeholder:text-muted-foreground"
         />
-        <span class="absolute bottom-2 right-0 text-xs text-muted-foreground">
+        <span style="bottom: -32px !important;" class="absolute right-0 text-xs text-muted-foreground">
           {{ contentCount }}/{{ CONTENT_MAX }}
         </span>
       </div>
