@@ -11,9 +11,10 @@ public static class NoteEndpoints
     {
         var notes = app.MapGroup("/api/v1/notes");
 
-        notes.MapGet("/", async (string? title, int? type, INoteRepository repo) =>
+        notes.MapGet("/", async (string? title, int? type, INoteRepository repo, int page = 1, int pageSize = 15) =>
         {
-            var data = await repo.GetAllAsync(title, type);
+            if (pageSize > 100) pageSize = 100;
+            var data = await repo.GetPagedAsync(title, type, page, pageSize);
             return Results.Ok(data);
         });
 

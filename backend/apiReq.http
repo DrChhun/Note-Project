@@ -1,7 +1,13 @@
 @baseUrl = http://localhost:8080/api/v1/notes
 
-### Get all notes – filter by title (partial match)
+### Get all notes (paged, default page=1 pageSize=15)
 GET {{baseUrl}}/
+
+### Get all notes – page and page size
+GET {{baseUrl}}/?page=1&pageSize=15
+
+### Get all notes – filter by title (partial match)
+GET {{baseUrl}}/?title=note
 
 ### Get all notes – filter by type
 GET {{baseUrl}}/?type=0

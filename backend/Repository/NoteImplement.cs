@@ -15,12 +15,25 @@ public sealed class NoteImplement : INoteRepository
             ?? throw new InvalidOperationException("ConnectionStrings:SqlServer is missing.");
     }
 
-    public async Task<IEnumerable<Note>> GetAllAsync(string? title = null, int? type = null)
+    public async Task<PagedResult<Note>> GetPagedAsync(string? title = null, int? type = null, int page = 1, int pageSize = 15)
     {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 15;
+
         await using var conn = new SqlConnection(_connectionString);
         var titlePattern = string.IsNullOrWhiteSpace(title) ? null : $"%{title.Trim()}%";
-        return await conn.QueryAsync<Note>(
-            """
+        var offset = (page - 1) * pageSize;
+        var param = new { TitlePattern = titlePattern, Type = type, Offset = offset, PageSize = pageSize };
+
+        var countSql = """
+            SELECT COUNT(*)
+            FROM dbo.Notes
+            WHERE (@TitlePattern IS NULL OR title LIKE @TitlePattern)
+              AND (@Type IS NULL OR type = @Type);
+            """;
+        var totalCount = await conn.ExecuteScalarAsync<int>(countSql, param);
+
+        var dataSql = """
             SELECT
                 id AS Id,
                 title AS Title,
@@ -31,9 +44,14 @@ public sealed class NoteImplement : INoteRepository
             FROM dbo.Notes
             WHERE (@TitlePattern IS NULL OR title LIKE @TitlePattern)
               AND (@Type IS NULL OR type = @Type)
-            ORDER BY id DESC;
-            """,
-            new { TitlePattern = titlePattern, Type = type });
+            ORDER BY id DESC
+            OFFSET @Offset ROWS
+            FETCH NEXT @PageSize ROWS ONLY;
+            """;
+        var items = (await conn.QueryAsync<Note>(dataSql, param)).ToList();
+        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        return new PagedResult<Note>(items, page, pageSize, totalCount, totalPages);
     }
 
     public async Task<Note?> GetByIdAsync(int id)
