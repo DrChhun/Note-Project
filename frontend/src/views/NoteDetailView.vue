@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
-import { getNoteById, updateNote } from '@/services/api/notes'
+import { getNoteById, updateNote, deleteNote } from '@/services/api/notes'
 import type { NoteApi } from '@/types/note'
 
 const route = useRoute()
@@ -15,6 +15,7 @@ const content = ref('')
 const type = ref<number | null>(null)
 const isLoading = ref(false)
 const isSaving = ref(false)
+const isDeleting = ref(false)
 const error = ref<string | null>(null)
 
 const TYPE_LABELS: Record<number, string> = {
@@ -24,9 +25,9 @@ const TYPE_LABELS: Record<number, string> = {
 }
 
 const TYPE_PILL_CLASS: Record<number, string> = {
-  0: 'bg-[#ffc1de] text-foreground',
-  1: 'bg-[#4a1733] text-white',
-  2: 'bg-[#ffd8ea] text-foreground',
+  0: 'bg-[#DEEBF7] text-gray-900',
+  1: 'bg-[#E2EFDA] text-gray-900',
+  2: 'bg-[#FFF2CC] text-gray-900',
 }
 
 const typeLabel = computed(() => {
@@ -35,7 +36,7 @@ const typeLabel = computed(() => {
 })
 
 const typePillClass = computed(() => {
-  if (type.value === null || type.value === undefined || !(type.value in TYPE_PILL_CLASS)) return 'bg-muted text-muted-foreground'
+  if (type.value === null || type.value === undefined || !(type.value in TYPE_PILL_CLASS)) return 'bg-[#E5E5E5] text-gray-900'
   return TYPE_PILL_CLASS[type.value]
 })
 
@@ -46,6 +47,11 @@ function cycleType() {
   }
   type.value = (type.value + 1) % 3
 }
+
+const TITLE_MAX = 50
+const CONTENT_MAX = 500
+
+const contentCount = computed(() => content.value.length)
 
 const displayDate = computed(() => {
   const iso = note.value?.createdAt
@@ -88,6 +94,19 @@ async function save() {
   }
 }
 
+async function handleDelete() {
+  isDeleting.value = true
+  error.value = null
+  try {
+    await deleteNote(noteId.value)
+    router.push('/')
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Failed to delete note'
+  } finally {
+    isDeleting.value = false
+  }
+}
+
 function goBack() {
   router.push('/')
 }
@@ -103,9 +122,22 @@ function goBack() {
       >
         ← Notes
       </button>
-      <Button :disabled="isSaving" @click="save">
-        {{ isSaving ? 'Saving...' : 'Save' }}
-      </Button>
+      <div class="flex gap-2">
+        <Button
+          class="py-6 w-[116px] cursor-pointer bg-[#F8D7DA] hover:bg-[#F5C6CB] text-gray-800 border-0"
+          :disabled="isDeleting || isSaving"
+          @click="handleDelete"
+        >
+          {{ isDeleting ? 'Deleting...' : 'Delete' }}
+        </Button>
+        <Button
+          class="py-6 w-[116px] cursor-pointer bg-[#DEEBF7] hover:bg-[#C5D9F0] text-gray-900 border-0"
+          :disabled="isSaving || isDeleting"
+          @click="save"
+        >
+          {{ isSaving ? 'Saving...' : 'Save' }}
+        </Button>
+      </div>
     </div>
 
     <div v-if="error" class="text-destructive text-sm mb-4">
@@ -121,6 +153,7 @@ function goBack() {
         v-model="title"
         placeholder="Title"
         rows="1"
+        :maxlength="TITLE_MAX"
         class="text-[26px] font-extrabold tracking-tight border-none bg-transparent w-full text-foreground mb-4 resize-none outline-none placeholder:text-muted-foreground leading-tight !overflow-hidden !mb-4"
       />
 
@@ -140,11 +173,17 @@ function goBack() {
         </span>
       </div>
 
-      <textarea
-        v-model="content"
-        placeholder="Start writing…"
-        class="flex-1 min-h-[300px] text-[15px] leading-[1.7] border-none bg-transparent w-full text-foreground resize-none outline-none placeholder:text-muted-foreground"
-      />
+      <div class="relative flex-1 flex flex-col">
+        <textarea
+          v-model="content"
+          placeholder="Start writing…"
+          :maxlength="CONTENT_MAX"
+          class="flex-1 min-h-[300px] text-[15px] leading-[1.7] border-none bg-transparent w-full text-foreground resize-none outline-none placeholder:text-muted-foreground"
+        />
+        <span class="absolute bottom-2 right-0 text-xs text-muted-foreground">
+          {{ contentCount }}/{{ CONTENT_MAX }}
+        </span>
+      </div>
     </div>
   </div>
 </template>

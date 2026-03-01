@@ -123,7 +123,10 @@ function formatDate(iso?: string): string {
           {{ filterLabels[filter] }}
         </button>
       </nav>
-      <Button class="shrink-0" @click="goToCreate">
+      <Button
+        class="shrink-0 py-6 w-[116px] cursor-pointer bg-[#DEEBF7] hover:bg-[#C5D9F0] text-gray-900 border-0"
+        @click="goToCreate"
+      >
         Create note
       </Button>
     </div>
@@ -134,6 +137,10 @@ function formatDate(iso?: string): string {
 
     <div v-else-if="isLoading" class="text-muted-foreground text-sm">
       Loading notes...
+    </div>
+
+    <div v-else-if="notes.length === 0" class="text-muted-foreground text-center py-12">
+      There are no data
     </div>
 
     <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -18,14 +18,19 @@ const TYPE_LABELS: Record<number, string> = {
 }
 
 const TYPE_PILL_CLASS: Record<number, string> = {
-  0: 'bg-[#ffc1de] text-foreground',
-  1: 'bg-[#4a1733] text-white',
-  2: 'bg-[#ffd8ea] text-foreground',
+  0: 'bg-[#DEEBF7] text-gray-900',
+  1: 'bg-[#E2EFDA] text-gray-900',
+  2: 'bg-[#FFF2CC] text-gray-900',
 }
 
 function cycleType() {
   type.value = (type.value + 1) % 3
 }
+
+const TITLE_MAX = 50
+const CONTENT_MAX = 500
+
+const contentCount = computed(() => content.value.length)
 
 const todayShort = computed(() =>
   new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
@@ -63,7 +68,11 @@ function goBack() {
       >
         ← Notes
       </button>
-      <Button :disabled="isCreating" @click="create">
+      <Button
+        class="py-6 w-[116px] cursor-pointer bg-[#DEEBF7] hover:bg-[#C5D9F0] text-gray-900 border-0"
+        :disabled="isCreating"
+        @click="create"
+      >
         {{ isCreating ? 'Creating...' : 'Save' }}
       </Button>
     </div>
@@ -77,6 +86,7 @@ function goBack() {
         v-model="title"
         placeholder="Title"
         rows="1"
+        :maxlength="TITLE_MAX"
         class="text-[26px] font-extrabold tracking-tight border-none bg-transparent w-full text-foreground mb-4 resize-none outline-none placeholder:text-muted-foreground leading-tight !overflow-hidden !mb-4"
       />
 
@@ -85,7 +95,7 @@ function goBack() {
           type="button"
           :class="[
             'text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 cursor-pointer border-none rounded transition-colors shrink-0 overflow-hidden whitespace-nowrap',
-            TYPE_PILL_CLASS[type] ?? 'bg-muted text-muted-foreground',
+            TYPE_PILL_CLASS[type] ?? 'bg-[#E5E5E5] text-gray-900',
           ]"
           @click="cycleType"
         >
@@ -96,11 +106,17 @@ function goBack() {
         </span>
       </div>
 
-      <textarea
-        v-model="content"
-        placeholder="Start writing…"
-        class="flex-1 min-h-[300px] text-[15px] leading-[1.7] border-none bg-transparent w-full text-foreground resize-none outline-none placeholder:text-muted-foreground"
-      />
+      <div class="relative flex-1 flex flex-col">
+        <textarea
+          v-model="content"
+          placeholder="Start writing…"
+          :maxlength="CONTENT_MAX"
+          class="flex-1 min-h-[300px] text-[15px] leading-[1.7] border-none bg-transparent w-full text-foreground resize-none outline-none placeholder:text-muted-foreground"
+        />
+        <span class="absolute bottom-2 right-0 text-xs text-muted-foreground">
+          {{ contentCount }}/{{ CONTENT_MAX }}
+        </span>
+      </div>
     </div>
   </div>
 </template>
