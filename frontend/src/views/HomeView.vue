@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import NoteCard from '@/components/NoteCard.vue'
 import { Button } from '@/components/ui/button'
 import { getNotes } from '@/services/api/notes'
 import type { NoteApi } from '@/types/note'
+
+const router = useRouter()
 
 type Filter = 'all' | 'work' | 'learn' | 'personal'
 
@@ -54,6 +57,14 @@ const filterLabels: Record<Filter, string> = {
 
 const activeFilterUnderline =
   "after:block after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-primary"
+
+function openNote(id: string | number) {
+  router.push(`/notes/${id}`)
+}
+
+function goToCreate() {
+  router.push('/notes/new')
+}
 
 function formatDate(iso?: string): string {
   if (!iso) return ''
@@ -112,7 +123,7 @@ function formatDate(iso?: string): string {
           {{ filterLabels[filter] }}
         </button>
       </nav>
-      <Button class="shrink-0">
+      <Button class="shrink-0" @click="goToCreate">
         Create note
       </Button>
     </div>
@@ -126,14 +137,19 @@ function formatDate(iso?: string): string {
     </div>
 
     <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <NoteCard
+      <div
         v-for="note in notes"
         :key="note.id"
-        :title="note.title"
-        :description="note.content"
-        :date="formatDate(note.createdAt)"
-        :type="note.type"
-      />
+        class="cursor-pointer"
+        @click="openNote(note.id)"
+      >
+        <NoteCard
+          :title="note.title"
+          :description="note.content"
+          :date="formatDate(note.createdAt)"
+          :type="note.type"
+        />
+      </div>
     </div>
   </div>
 </template>
