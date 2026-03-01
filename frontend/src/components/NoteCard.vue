@@ -1,25 +1,40 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   title: string
   description: string
   date: string
+  type?: number
 }>()
+
+const NOTE_TYPE_COLORS: Record<number, string> = {
+  0: '#DEEBF7',
+  1: '#E2EFDA',
+  2: '#FFF2CC',
+}
+
+const backgroundColor = computed(() =>
+  props.type !== undefined && NOTE_TYPE_COLORS[props.type] !== undefined
+    ? NOTE_TYPE_COLORS[props.type]
+    : '#E5E5E5',
+)
 </script>
 
 <template>
   <div
-    class="rounded-2xl p-5 text-left shadow-sm min-h-[180px] flex flex-col hover:cursor-pointer"
-    style="background-color: #FDF2CE"
+    class="h-[220px] rounded-2xl p-5 text-left shadow-sm flex flex-col hover:cursor-pointer overflow-hidden"
+    :style="{ backgroundColor }"
   >
-    <div class="flex-1 space-y-1">
-      <h2 class="text-2xl font-semibold text-gray-900 leading-snug">
-        {{ title }}
-      </h2>
-      <p class="text-base text-gray-800 leading-snug">
+    <h2 class="text-xl font-semibold text-gray-900 leading-snug shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">
+      {{ title }}
+    </h2>
+    <div class="flex-1 min-h-0 mt-1 flex flex-col">
+      <p class="text-sm text-gray-700 leading-snug line-clamp-4 break-words">
         {{ description }}
       </p>
     </div>
-    <p class="text-sm text-gray-600 mt-4">
+    <p class="text-sm text-gray-600 mt-4 shrink-0">
       {{ date }}
     </p>
   </div>

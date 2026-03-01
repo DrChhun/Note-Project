@@ -121,3 +121,20 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* App container (from testProject reference) */
+.app-container {
+  max-width: 920px;
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 1rem 1.5rem;
+}
+
+@media (min-width: 980px) {
+  .app-container {
+    max-width: 980px;
+  }
+}
