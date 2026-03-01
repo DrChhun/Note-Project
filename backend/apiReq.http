@@ -1,4 +1,39 @@
 @baseUrl = http://localhost:8080/api/v1/notes
 
-### Hello World
+### Get all notes
 GET {{baseUrl}}/
+
+### Get all notes – filter by title (partial match)
+GET {{baseUrl}}/
+
+### Get all notes – filter by type
+GET {{baseUrl}}/?type=0
+
+### Get all notes – filter by title and type
+GET {{baseUrl}}/?title=note&type=1
+
+### Get note by id
+GET {{baseUrl}}/2
+
+### Create note
+POST {{baseUrl}}/
+Content-Type: application/json
+
+{
+  "title": "My first note",
+  "content": "Some content here.",
+  "type": 0
+}
+
+### Update note
+PUT {{baseUrl}}/2
+Content-Type: application/json
+
+{
+  "title": "Updated title",
+  "content": "Updated content.",
+  "type": 1
+}
+
+### Delete note
+DELETE {{baseUrl}}/1
