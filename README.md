@@ -22,14 +22,23 @@ style: tailwind
 ui lib: shadcn
 
 Feature :
+ 
  + Frontend
+ 
  CRUD Operations: Full implementation of Create, Read, Update, and Delete.
+ 
  Data Management: Filtering and sorting.
+ 
  Search: Real-time search.
+ 
  UI/UX: Responsive design with Tailwind CSS.
+ 
  API Integration: Axios/Fetch.
+ 
  State Management: Centralized state handling.
  
  + Backend
+ 
  Note Services: Core CRUD logic.
+ 
  Data Access: Dapper ORM with SQL Server.
