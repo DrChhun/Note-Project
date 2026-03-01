@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { toast } from '@/components/ui/sonner'
 import { Button } from '@/components/ui/button'
 import { getNoteById, updateNote, deleteNote } from '@/services/api/notes'
 import type { NoteApi } from '@/types/note'
@@ -98,8 +99,13 @@ async function handleDelete() {
   isDeleting.value = true
   error.value = null
   try {
-    await deleteNote(noteId.value)
-    router.push('/')
+    const { success } = await deleteNote(noteId.value)
+    if (success) {
+      toast.success('Note deleted successfully')
+      router.push('/')
+    } else {
+      error.value = 'Delete request did not succeed'
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to delete note'
   } finally {

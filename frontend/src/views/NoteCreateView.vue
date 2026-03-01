@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { toast } from '@/components/ui/sonner'
 import { Button } from '@/components/ui/button'
 import { createNote } from '@/services/api/notes'
 
@@ -40,12 +41,17 @@ async function create() {
   isCreating.value = true
   error.value = null
   try {
-    await createNote({
+    const note = await createNote({
       title: title.value || 'Untitled',
       content: content.value,
       type: type.value,
     })
-    router.push('/')
+    if (note?.id != null) {
+      toast.success('Note created successfully')
+      router.push('/')
+    } else {
+      error.value = 'Create request did not return a valid note'
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to create note'
   } finally {

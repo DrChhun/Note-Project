@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { refDebounced } from '@vueuse/core'
 import NoteCard from '@/components/NoteCard.vue'
 import { Button } from '@/components/ui/button'
-import { getNotes } from '@/services/api/notes'
+import { getNotesPaginated } from '@/services/api/notes'
 import type { NoteApi } from '@/types/note'
 
 const router = useRouter()
@@ -16,33 +17,98 @@ const FILTER_TO_TYPE: Record<Exclude<Filter, 'all'>, number> = {
   personal: 0,
 }
 
+const PAGE_SIZE = 15
+
 const searchQuery = ref('')
+const debouncedSearchQuery = refDebounced(searchQuery, 400)
 const activeFilter = ref<Filter>('all')
 const notes = ref<NoteApi[]>([])
+const currentPage = ref(1)
+const totalPages = ref(0)
+const hasMore = ref(true)
 const isLoading = ref(false)
+const isLoadingMore = ref(false)
 const error = ref<string | null>(null)
+const loadMoreSentinel = ref<HTMLElement | null>(null)
 
-async function fetchNotes() {
-  isLoading.value = true
+let scrollObserver: IntersectionObserver | null = null
+
+function buildParams() {
+  const params: { title?: string; type?: number } = {}
+  if (debouncedSearchQuery.value.trim()) params.title = debouncedSearchQuery.value.trim()
+  if (activeFilter.value !== 'all') params.type = FILTER_TO_TYPE[activeFilter.value]
+  return params
+}
+
+async function fetchNotes(reset = true) {
+  if (reset) {
+    isLoading.value = true
+    currentPage.value = 1
+    notes.value = []
+    hasMore.value = true
+  } else {
+    isLoadingMore.value = true
+  }
   error.value = null
   try {
-    const params: { title?: string; type?: number } = {}
-    if (searchQuery.value.trim()) params.title = searchQuery.value.trim()
-    if (activeFilter.value !== 'all') params.type = FILTER_TO_TYPE[activeFilter.value]
-    notes.value = await getNotes(params)
+    const res = await getNotesPaginated({
+      page: currentPage.value,
+      pageSize: PAGE_SIZE,
+      ...buildParams(),
+    })
+    if (reset) {
+      notes.value = res.payload
+    } else {
+      notes.value = [...notes.value, ...res.payload]
+    }
+    totalPages.value = res.totalPages
+    hasMore.value = currentPage.value < res.totalPages
+    currentPage.value += 1
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load notes'
-    notes.value = []
+    if (reset) notes.value = []
   } finally {
     isLoading.value = false
+    isLoadingMore.value = false
   }
 }
 
+async function loadMore() {
+  if (isLoadingMore.value || isLoading.value || !hasMore.value) return
+  await fetchNotes(false)
+}
+
+scrollObserver = new IntersectionObserver(
+  (entries) => {
+    const [entry] = entries
+    if (entry?.isIntersecting && hasMore.value && !isLoading.value && !isLoadingMore.value) {
+      loadMore()
+    }
+  },
+  { rootMargin: '100px', threshold: 0 },
+)
+
+watch(loadMoreSentinel, (el, _, onCleanup) => {
+  if (!scrollObserver) return
+  let observed: Element | null = null
+  if (el) {
+    scrollObserver.observe(el)
+    observed = el
+  }
+  onCleanup(() => {
+    if (observed) scrollObserver?.unobserve(observed)
+  })
+}, { immediate: true })
+
 onMounted(() => {
-  fetchNotes()
+  fetchNotes(true)
 })
 
-watch([searchQuery, activeFilter], fetchNotes)
+onUnmounted(() => {
+  scrollObserver?.disconnect()
+})
+
+watch([debouncedSearchQuery, activeFilter], () => fetchNotes(true))
 
 function setFilter(filter: Filter) {
   activeFilter.value = filter
@@ -86,7 +152,7 @@ function formatDate(iso?: string): string {
 
     <div class="pb-6">
       <div
-        class="w-full flex items-center gap-2.5 bg-background border border-border rounded-[14px] px-3.5 py-3 text-muted-foreground cursor-text shadow-sm focus-within:outline focus-within:outline-2 focus-within:outline-ring focus-within:outline-offset-2"
+        class="w-full flex items-center gap-2.5 bg-background border border-border rounded-[14px] px-3.5 py-3 text-muted-foreground cursor-text"
       >
         <span class="inline-flex items-center text-muted-foreground shrink-0" aria-hidden="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -97,7 +163,7 @@ function formatDate(iso?: string): string {
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Search notes, tags, dates..."
+          placeholder="Search by title..."
           aria-label="Search notes"
           class="flex-1 min-w-0 border-none bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground"
         >
@@ -143,20 +209,37 @@ function formatDate(iso?: string): string {
       There are no data
     </div>
 
-    <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div
-        v-for="note in notes"
-        :key="note.id"
-        class="cursor-pointer"
-        @click="openNote(note.id)"
-      >
-        <NoteCard
-          :title="note.title"
-          :description="note.content"
-          :date="formatDate(note.createdAt)"
-          :type="note.type"
-        />
+    <template v-else>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          v-for="note in notes"
+          :key="note.id"
+          class="cursor-pointer"
+          @click="openNote(note.id)"
+        >
+          <NoteCard
+            :title="note.title"
+            :description="note.content"
+            :date="formatDate(note.createdAt)"
+            :type="note.type"
+          />
+        </div>
       </div>
-    </div>
+
+      <!-- Infinite scroll sentinel + loading indicator -->
+      <div
+        v-if="notes.length > 0"
+        ref="loadMoreSentinel"
+        class="flex justify-center items-center py-8 min-h-[80px]"
+      >
+        <p v-if="isLoadingMore" class="text-sm text-muted-foreground">
+          Loading more notes...
+        </p>
+        <p v-else-if="!hasMore" class="text-sm text-muted-foreground">
+          You've seen all notes
+        </p>
+        <span v-else class="inline-block w-px h-px" aria-hidden="true" />
+      </div>
+    </template>
   </div>
 </template>
